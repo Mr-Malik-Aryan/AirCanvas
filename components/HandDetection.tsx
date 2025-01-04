@@ -2,11 +2,17 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { FilesetResolver, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
+import { Pencil, Hand, Video, VideoOff } from "lucide-react";
 
 interface HandDetectionProps {
   width?: number;
   height?: number;
   maxHands?: number;
+}
+
+interface Point {
+  x: number;
+  y: number;
 }
 
 const DEFAULT_CONFIG = {
@@ -18,7 +24,9 @@ const DEFAULT_CONFIG = {
 const INDEX_FINGER_TIP = 8;
 const THUMB_TIP = 4;
 const PINCH_THRESHOLD = 0.03;
-const PINCH_COOLDOWN = 500; // Milliseconds to wait before allowing another pinch
+const PINCH_COOLDOWN = 300;
+const SMOOTHING_FACTOR = 0.4;
+const POINT_MEMORY = 2;
 
 const HandDetection: React.FC<HandDetectionProps> = ({
   width = DEFAULT_CONFIG.width,
@@ -32,19 +40,32 @@ const HandDetection: React.FC<HandDetectionProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [start, setStart] = useState(false);
+  const [drawMode, setDrawMode] = useState(false);
   const [isPenEnabled, setIsPenEnabled] = useState(false);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
   const isDragEnabledRef = useRef(false);
-  const isPenEnabledRef = useRef(false); // Add this ref to track pen state
-  const previousPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const isPenEnabledRef = useRef(false);
+  const previousPositionRef = useRef<Point | null>(null);
   const lastPinchTimeRef = useRef<number>(0);
   const isPinchedRef = useRef<boolean>(false);
+  const pointHistoryRef = useRef<Point[]>([]);
 
-  // Update ref when state changes
   useEffect(() => {
     isPenEnabledRef.current = isPenEnabled;
-    isDragEnabledRef.current =isDragEnabled;
-  }, [isPenEnabled,isDragEnabled]);
+    isDragEnabledRef.current = isDragEnabled;
+  }, [isPenEnabled, isDragEnabled]);
+
+  const clearCanvas = () => {
+    const drawingCanvas = drawingCanvasRef.current;
+    if (drawingCanvas) {
+      const ctx = drawingCanvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+      }
+    }
+    pointHistoryRef.current = [];
+    previousPositionRef.current = null;
+  };
 
   useEffect(() => {
     let animationFrameId: number;
@@ -101,32 +122,60 @@ const HandDetection: React.FC<HandDetectionProps> = ({
         const startTimeMs = performance.now();
         const results = handLandmarker.detectForVideo(videoElement, startTimeMs);
 
-        checkPinchGesture(results);
-       // console.log(results)
-        drag(results)
-        drawResults(results);
-        if (isPenEnabledRef.current) { // Use ref instead of state
-          drawOnSheet(results);
-        } else {
-          previousPositionRef.current = null;
+        if (drawMode) {
+          checkPinchGesture(results);
+          if (isPenEnabledRef.current) {
+            drawOnSheet(results);
+          } else {
+            previousPositionRef.current = null;
+            pointHistoryRef.current = [];
+          }
         }
-
+        
+        drawResults(results);
         animationFrameId = requestAnimationFrame(detectFrame);
       };
 
       detectFrame();
     };
-     if (start)
-    initializeHandLandmarker();
 
+    if (start) {
+      initializeHandLandmarker();
+    }
 
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       if (stream) stream.getTracks().forEach((track) => track.stop());
       if (handLandmarkerRef.current) handLandmarkerRef.current.close();
     };
+  }, [width, height, maxHands, start, drawMode]);
+
+  const smoothPoint = (currentPoint: Point): Point => {
+    const points = pointHistoryRef.current;
+    points.push(currentPoint);
     
-  }, [width, height, maxHands,start]); // Remove isPenEnabled from dependencies
+    if (points.length > POINT_MEMORY) {
+      points.shift();
+    }
+
+    if (points.length < 2) return currentPoint;
+
+    let smoothX = 0;
+    let smoothY = 0;
+
+    const totalWeight = points.reduce((sum, _, index) => sum + (index + 1), 0);
+
+    points.forEach((point, index) => {
+      const weight = (index + 1) / totalWeight;
+      smoothX += point.x * weight;
+      smoothY += point.y * weight;
+    });
+
+    return {
+      x: currentPoint.x * (1 - SMOOTHING_FACTOR) + smoothX * SMOOTHING_FACTOR,
+      y: currentPoint.y * (1 - SMOOTHING_FACTOR) + smoothY * SMOOTHING_FACTOR
+    };
+  };
 
   const checkPinchGesture = (results: HandLandmarkerResult) => {
     if (!results.landmarks?.[0]) {
@@ -140,7 +189,7 @@ const HandDetection: React.FC<HandDetectionProps> = ({
 
     const distance = Math.sqrt(
       Math.pow(thumbTip.x - indexTip.x, 2) +
-      Math.pow(thumbTip.y - indexTip.y, 2) 
+      Math.pow(thumbTip.y - indexTip.y, 2)
     );
 
     const isPinched = distance < PINCH_THRESHOLD;
@@ -150,16 +199,12 @@ const HandDetection: React.FC<HandDetectionProps> = ({
         !isPinchedRef.current && 
         currentTime - lastPinchTimeRef.current > PINCH_COOLDOWN) {
       setIsPenEnabled(prev => !prev);
-      setIsDragEnabled(prev=>!prev);
+      setIsDragEnabled(prev => !prev);
       lastPinchTimeRef.current = currentTime;
     }
 
     isPinchedRef.current = isPinched;
   };
-  const drag =(results:HandLandmarkerResult)=>{
-    checkPinchGesture(results)
-
-  }
 
   const drawResults = (results: HandLandmarkerResult) => {
     const canvasElement = canvasRef.current;
@@ -173,7 +218,7 @@ const HandDetection: React.FC<HandDetectionProps> = ({
     if (results.landmarks) {
       results.landmarks.forEach((landmarks) => {
         landmarks.forEach((landmark, index) => {
-          const x = canvasElement.width - (landmark.x * canvasElement.width);
+          const x = landmark.x * canvasElement.width;
           const y = landmark.y * canvasElement.height;
           
           ctx.beginPath();
@@ -186,80 +231,132 @@ const HandDetection: React.FC<HandDetectionProps> = ({
       });
     }
   };
- //code to draw
+
   const drawOnSheet = (results: HandLandmarkerResult) => {
     const drawingCanvasElement = drawingCanvasRef.current;
-    if (!drawingCanvasElement || !results.landmarks) return;
+    if (!drawingCanvasElement || !results.landmarks?.[0]) return;
 
     const ctx = drawingCanvasElement.getContext("2d");
     if (!ctx) return;
 
-    results.landmarks.forEach((landmarkList) => {
-      const indexTip = landmarkList[INDEX_FINGER_TIP];
-      const x = drawingCanvasElement.width - (indexTip.x * drawingCanvasElement.width);
-      const y = indexTip.y * drawingCanvasElement.height;
+    const indexTip = results.landmarks[0][INDEX_FINGER_TIP];
+    const rawX = indexTip.x * drawingCanvasElement.width;
+    const rawY = indexTip.y * drawingCanvasElement.height;
 
-      const previousPosition = previousPositionRef.current;
+    const smoothedPoint = smoothPoint({ x: rawX, y: rawY });
+    const previousPosition = previousPositionRef.current;
 
-      if (previousPosition) {
-        ctx.beginPath();
-        ctx.moveTo(previousPosition.x, previousPosition.y);
-        ctx.lineTo(x, y);
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 4;
-        ctx.stroke();
-      }
+    if (previousPosition) {
+      ctx.beginPath();
+      ctx.moveTo(previousPosition.x, previousPosition.y);
+      
+      const controlX = (previousPosition.x + smoothedPoint.x) / 2;
+      const controlY = (previousPosition.y + smoothedPoint.y) / 2;
+      
+      ctx.quadraticCurveTo(controlX, controlY, smoothedPoint.x, smoothedPoint.y);
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+    }
 
-      previousPositionRef.current = { x, y };
-    });
+    previousPositionRef.current = smoothedPoint;
   };
 
-  return (<>
+  return (
+    <div className="w-full bg-gray-100 p-4">
+      <div className="w-full">
+        <div className="bg-white w-full rounded-lg shadow-lg p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-gray-800">AirCanvas</h1>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setStart(prev => !prev)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md ${
+                  start ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
+                } text-white transition-colors`}
+              >
+                {start ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                {start ? 'Stop Camera' : 'Start Camera'}
+              </button>
+              {start && (
+                <button
+                  onClick={() => {
+                    setDrawMode(prev => !prev);
+                    setIsPenEnabled(false);
+                    setIsDragEnabled(false);
+                    clearCanvas();
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md ${
+                    drawMode ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-500 hover:bg-gray-600'
+                  } text-white transition-colors`}
+                >
+                  {drawMode ? <Hand className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
+                  {drawMode ? 'Hand Detection Mode' : 'Drawing Mode'}
+                </button>
+              )}
+            </div>
+          </div>
 
-    <div className="relative w-full h-full">
-    <button  className=" absolute z-20 left-80 bg-green-400 ml-auto w-20 h-10" onClick={()=>{setStart(prev=>!prev);console.log(start)}}>Start</button>
+          {/* Status Indicators */}
+          <div className="flex gap-4 mb-4">
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+                Error: {error}
+              </div>
+            )}
+            {isLoading && start && (
+              <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-2 rounded">
+                Loading hand detection model...
+              </div>
+            )}
+            {drawMode && (
+              <div className={`px-4 py-2 rounded ${
+                isDragEnabled ? 'bg-green-100 border border-green-400 text-green-700' : 'bg-gray-100 border border-gray-400 text-gray-700'
+              }`}>
+                Drawing: {isDragEnabled ? 'Enabled' : 'Disabled'}
+              </div>
+            )}
+          </div>
 
-      {error && (
-        <div className="absolute top-0 left-0 bg-red-500 text-white p-2 rounded z-50">
-          Error: {error}
+          {/* Main Content */}
+          <div className="h-[800px] w-full relative bg-gray-900 rounded-lg overflow-hidden">
+            <video
+              ref={videoRef}
+              className="absolute bottom-0 right-0 w-1/5 h-1/5"
+              style={{ transform: 'scaleX(-1)' }}
+            />
+            <canvas
+              ref={canvasRef}
+              width={width}
+              height={height}
+              className="absolute top-0 left-0 w-full h-full pointer-events-none"
+              style={{ transform: 'scaleX(-1)' }}
+            />
+            <canvas
+              ref={drawingCanvasRef}
+              width={width}
+              height={height}
+              className="absolute top-0 left-0 w-full h-full"
+              style={{ transform: 'scaleX(-1)' }}
+            />
+          </div>
+
+          {/* Instructions */}
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h2 className="text-lg font-semibold mb-2">Instructions:</h2>
+            <ul className="list-disc list-inside space-y-1 text-gray-700">
+              <li>Click "Start Camera" to begin hand detection</li>
+              <li>Switch to "Drawing Mode" to enable drawing features</li>
+              <li>In drawing mode, pinch your thumb and index finger together to toggle drawing</li>
+              <li>Move your index finger to draw when enabled</li>
+            </ul>
+          </div>
         </div>
-      )}
-      {isLoading && (
-        <div className="absolute top-0 left-0 bg-blue-500 text-white p-2 rounded z-50">
-          Loading hand detection model...
-        </div>
-      )}
-     {isDragEnabled&&( <div className="absolute top-0 left-1/2 bg-green-500 text-white p-2 rounded z-50">
-        Pinch: {'Enabled'}
-      </div>
-     )}
-        {!isDragEnabled&&( <div className="absolute top-0 left-1/2 bg-red-500 text-white p-2 rounded z-50">
-        Pinch: {'Disabled'}
-      </div>
-     )}
-      <div className="flex justify-center w-full h-screen">
-        <video
-          ref={videoRef}
-          width="30%"
-          height="50%"
-          className="flex ml-auto mt-auto  rounded h-screen"
-          style={{ transform: 'scaleX(-1)' }}
-        />
-        <canvas
-          ref={canvasRef}
-          width={width}
-          height={height}
-          className="absolute top-0 left-0 pointer-events-none w-full h-screen" 
-        />
-        <canvas
-          ref={drawingCanvasRef}
-          width={width}
-          height={height}
-          className="absolute top-0 left-0 w-full h-screen" 
-        />
       </div>
     </div>
-    </>
   );
 };
 

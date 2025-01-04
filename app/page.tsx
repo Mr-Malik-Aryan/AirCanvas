@@ -8,7 +8,7 @@ export default function Home() {
       <Head>
         <title>Hand Detection with MediaPipe</title>
       </Head>
-      <main className='w-full h-screen flex'>
+      <main className='w-full  '>
       
         <HandDetection />
    
