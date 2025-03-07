@@ -29,21 +29,21 @@ AirCanvas is a gesture-controlled virtual drawing application that allows users 
 
 2. Install required packages:
    ```
-   pip install -r requirements.txt
+   npm install
    ```
 
 ## Usage
 
-1. Run the main script:
+1. Run the  script:
    ```
-   python air_canvas.py
+   npm run dev
    ```
 
-2. Adjust the red color trackbars to detect your marker correctly.
+2. Enable the Drawing mode and pinch (touch index finger and thumb) to enable /disable pen.
 
-3. Use a red colored marker (like red tape on your fingertip) to draw.
+3. Use a finger tip the motion tracked will be shown.
 
-4. Press 'q' to quit the application.
+4. Pinch again to de-select pen once finished drawing .
 
 ## How It Works
 
@@ -61,7 +61,7 @@ AirCanvas uses computer vision techniques with MediaPipe to track hand movements
 You can customize the tracking sensitivity in the code:
 
 - Adjust HSV thresholds in the trackbars for better red color detection
-- Modify drawing parameters in the `air_canvas.py` file
+- Modify drawing parameters in the file
 - Change brush size by modifying the drawing thickness
 
 ## Contributing
