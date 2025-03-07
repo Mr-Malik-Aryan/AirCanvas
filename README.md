@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AirCanvas 🖌️
 
-## Getting Started
+AirCanvas is a gesture-controlled virtual drawing application that allows users to draw in the air using hand movements. By tracking a red colored marker on the fingertip, users can create digital artwork through natural hand gestures.
 
-First, run the development server:
+![AirCanvas Demo](https://raw.githubusercontent.com/Mr-Malik-Aryan/AirCanvas/main/demo.jpg)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Real-time hand gesture tracking using MediaPipe
+- Red color marker detection for drawing
+- Clear canvas functionality
+- Easy-to-use interface
+- Customizable tracking settings
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Requirements
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Python 3.6+
+- OpenCV
+- NumPy
+- MediaPipe
 
-## Learn More
+## Installation
 
-To learn more about Next.js, take a look at the following resources:
+1. Clone the repository:
+   ```
+   git clone https://github.com/Mr-Malik-Aryan/AirCanvas.git
+   cd AirCanvas
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. Install required packages:
+   ```
+   pip install -r requirements.txt
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Usage
 
-## Deploy on Vercel
+1. Run the main script:
+   ```
+   python air_canvas.py
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. Adjust the red color trackbars to detect your marker correctly.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Use a red colored marker (like red tape on your fingertip) to draw.
+
+4. Press 'q' to quit the application.
+
+## How It Works
+
+AirCanvas uses computer vision techniques with MediaPipe to track hand movements:
+
+1. The webcam captures video input.
+2. MediaPipe provides hand landmark detection.
+3. Color thresholding isolates the red marker.
+4. Contour detection identifies the marker position.
+5. The detected positions are used to draw on a virtual canvas.
+6. The virtual canvas is overlaid on the webcam feed.
+
+## Customization
+
+You can customize the tracking sensitivity in the code:
+
+- Adjust HSV thresholds in the trackbars for better red color detection
+- Modify drawing parameters in the `air_canvas.py` file
+- Change brush size by modifying the drawing thickness
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Powered by MediaPipe for hand tracking
+- Built with OpenCV for Python image processing
+
+## Author
+
+- Aryan Malik - [GitHub](https://github.com/Mr-Malik-Aryan)
