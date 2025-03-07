@@ -2,7 +2,7 @@
 
 AirCanvas is a gesture-controlled virtual drawing application that allows users to draw in the air using hand movements. By tracking a red colored marker on the fingertip, users can create digital artwork through natural hand gestures.
 
-![AirCanvas Demo](https://raw.githubusercontent.com/Mr-Malik-Aryan/AirCanvas/main/demo.jpg)
+![AirCanvas Demo](https://github.com/Mr-Malik-Aryan/AirCanvas/blob/main/public/Screenshot%20from%202025-03-07%2007-23-53.png)
 
 ## Features
 
