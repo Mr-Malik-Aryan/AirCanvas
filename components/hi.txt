@@ -1,0 +1,24 @@
+c) More precise fuel injection and timing
+a) Injection timing and fuel quantity
+c) 18:1
+b) Solenoid control
+c) Both a and b
+d) All of the above
+d) All of the above
+b) The power output of each cylinder
+a) Load applied on an engine
+10 b) Impulse turbine
+b) Requires high-pressure water jets
+c) 180°
+d) Mixed flow reaction turbine
+b) To distribute pressure evenly
+b) Low pressure at the outlet
+b) To maintain efficiency at varying loads
+a) 3 to 6
+c) Kaplan is an axial flow turbine, and Francis is a mixed flow turbine
+a) The turbine is running at full load
+d) A and B
+b) Pressure difference
+d) Both b and c
+b) Blade angle
+d) All of the above

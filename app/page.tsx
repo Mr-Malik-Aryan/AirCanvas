@@ -1,7 +1,7 @@
 // pages/index.tsx
 import Head from 'next/head';
 import HandDetection from '../components/HandDetection';
-
+import DragDetection from '../components/DragDetection';
 export default function Home() {
   return (
     <div>

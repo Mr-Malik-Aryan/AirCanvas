@@ -18,7 +18,7 @@ interface Point {
 const DEFAULT_CONFIG = {
   width: 1000,
   height: 1000,
-  maxHands: 1,
+  maxHands: 2,
 };
 
 const INDEX_FINGER_TIP = 8;
@@ -323,6 +323,10 @@ const HandDetection: React.FC<HandDetectionProps> = ({
 
           {/* Main Content */}
           <div className="h-[800px] w-full relative bg-gray-900 rounded-lg overflow-hidden">
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+
+</div>
+
             <video
               ref={videoRef}
               className="absolute bottom-0 right-0 w-1/5 h-1/5"
